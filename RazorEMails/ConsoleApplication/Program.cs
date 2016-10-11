@@ -1,22 +1,21 @@
 ﻿using Common.Data.Models;
+using Common.Data.Resources;
 using Common.Data.ViewModels;
 using ConsoleApplication.Models;
 using ConsoleApplication.ViewModel;
 using RazorEngine;
 using RazorEngine.Templating;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Net.Mail;
 using System.Reflection;
 using System.Security;
 using System.Security.Permissions;
 using System.Security.Policy;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace ConsoleApplication
 {
@@ -45,12 +44,12 @@ namespace ConsoleApplication
 
             // int returnCode = SimpleWelcomeTemplate();
             // int returnCode = WelcomeWithViewModelTemplate();
-            // int returnCode = WelcomeWithLinkedViewModelTemplate();
+            int returnCode = WelcomeWithLinkedViewModelTemplate();
 
-            int returnCode = RunMultipleTimes(WelcomeWithViewModelTemplate, 10, 20);
-            Console.WriteLine("====== ===== ==== ===== ===== ===== ===== ===== ===== ==== =====");
-            Thread.Sleep(1000);
-            returnCode = RunMultipleTimes(WelcomeWithLinkedViewModelTemplate, 10, 20);
+            //int returnCode = RunMultipleTimes(WelcomeWithViewModelTemplate, 10, 20);
+            //Console.WriteLine("====== ===== ==== ===== ===== ===== ===== ===== ===== ==== =====");
+            //Thread.Sleep(1000);
+            //returnCode = RunMultipleTimes(WelcomeWithLinkedViewModelTemplate, 10, 20);
             
             Console.ReadLine();
 
@@ -178,7 +177,21 @@ namespace ConsoleApplication
             AlternateView htmlView = AlternateView.CreateAlternateViewFromString(emailHtmlBody, null, "text/html");
 
             //path of image or stream
-            LinkedResource imagelink = new LinkedResource(@".\Images\Logo.png", "image/png");
+            string logoFilePath = @".\Images\Logo.png";
+            LinkedResource imagelink = null;
+
+            try
+            {
+                if (File.Exists(logoFilePath))
+                    imagelink = new LinkedResource(logoFilePath, "image/png");
+                else
+                    imagelink = GetDefaultLogoFromEmbeddedResource();
+            }
+            catch (Exception)
+            {
+                imagelink = GetDefaultLogoFromEmbeddedResource();
+            }
+
             imagelink.ContentId = contentID;
             imagelink.TransferEncoding = System.Net.Mime.TransferEncoding.Base64;
             htmlView.LinkedResources.Add(imagelink);
@@ -199,6 +212,23 @@ namespace ConsoleApplication
             smtpClient.Send(email);
 
             return 0;
+        }
+
+        private static LinkedResource GetDefaultLogoFromEmbeddedResource()
+        {
+            try
+            {
+                var defaultLogo = new Bitmap(DefaultImages.DefaultLogo);
+                var memoryStream = new MemoryStream();
+                defaultLogo.Save(memoryStream, ImageFormat.Png);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+
+                return new LinkedResource(memoryStream, "image/png");
+            }
+            catch (Exception)
+            {
+                return LinkedResource.CreateLinkedResourceFromString("Logo");
+            }
         }
     }
 }
