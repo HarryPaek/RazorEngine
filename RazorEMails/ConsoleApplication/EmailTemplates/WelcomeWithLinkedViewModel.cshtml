@@ -9,6 +9,9 @@
     <title>Welcome</title>
 </head>
 <body>
+    <div>
+        <img src="$CONTENTID$" width="180" />
+    </div>
     <p>
         Hi @Model.Receiver.Name,
     </p>
@@ -32,7 +35,7 @@
         </table>
     </div>
 
-    <p>@DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</p>
+    <p>@DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffff")</p>
     <p>John, Founder</p>
 
 </body>

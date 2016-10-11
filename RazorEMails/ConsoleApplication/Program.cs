@@ -6,6 +6,7 @@ using RazorEngine;
 using RazorEngine.Templating;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Mail;
@@ -14,6 +15,7 @@ using System.Security;
 using System.Security.Permissions;
 using System.Security.Policy;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ConsoleApplication
@@ -21,15 +23,6 @@ namespace ConsoleApplication
     class Program
     {
         static int Main(string[] args)
-        {
-            // int exitCode = SimpleWelcomeTemplate();
-            // int exitCode = WelcomeWithViewModelTemplate();
-            int exitCode = WelcomeWithLinkedViewModelTemplate();
-
-            return exitCode;
-        }
-
-        private static int SimpleWelcomeTemplate()
         {
             if (AppDomain.CurrentDomain.IsDefaultAppDomain())
             {
@@ -46,9 +39,46 @@ namespace ConsoleApplication
 
                 // RazorEngine will cleanup. 
                 AppDomain.Unload(razorEngineDomain);
+
                 return exitCode;
             }
 
+            // int returnCode = SimpleWelcomeTemplate();
+            // int returnCode = WelcomeWithViewModelTemplate();
+            // int returnCode = WelcomeWithLinkedViewModelTemplate();
+
+            int returnCode = RunMultipleTimes(WelcomeWithViewModelTemplate, 10, 20);
+            Console.WriteLine("====== ===== ==== ===== ===== ===== ===== ===== ===== ==== =====");
+            Thread.Sleep(1000);
+            returnCode = RunMultipleTimes(WelcomeWithLinkedViewModelTemplate, 10, 20);
+            
+            Console.ReadLine();
+
+            return returnCode;
+        }
+
+        private static int RunMultipleTimes(Func<int> mailSenderWithTemplate, int times, int spanToSleep = 20)
+        {
+            int exitCode = 0;
+
+            for (int i = 0; i < times; i++)
+            {
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+
+                exitCode = mailSenderWithTemplate();
+
+                stopwatch.Stop();
+                Console.WriteLine("ElapsedMilliseconds for Loop[{0:D3}]  = [{1:D4}]", i, stopwatch.ElapsedMilliseconds);
+
+                Thread.Sleep(spanToSleep);
+            }
+
+            return exitCode;
+        }
+
+        private static int SimpleWelcomeTemplate()
+        {
             var templateFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "EmailTemplates");
             var templateFilePath = Path.Combine(templateFolderPath, "WelcomeEmail.cshtml");
 
@@ -73,31 +103,11 @@ namespace ConsoleApplication
             var smtpClient = new SmtpClient();
             smtpClient.Send(email);
 
-            Console.ReadLine();
-
             return 0;
         }
 
         private static int WelcomeWithViewModelTemplate()
         {
-            if (AppDomain.CurrentDomain.IsDefaultAppDomain())
-            {
-                // RazorEngine cannot clean up from the default appdomain...
-                Console.WriteLine("Switching to secound AppDomain, for RazorEngine...");
-                AppDomainSetup adSetup = new AppDomainSetup();
-                adSetup.ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
-                var current = AppDomain.CurrentDomain;
-                // You only need to add strongnames when your appdomain is not a full trust environment.
-                var strongNames = new StrongName[0];
-
-                var razorEngineDomain = AppDomain.CreateDomain("MyViewModelRazorEngineDomain", null, current.SetupInformation, new PermissionSet(PermissionState.Unrestricted), strongNames);
-                var exitCode = razorEngineDomain.ExecuteAssembly(Assembly.GetExecutingAssembly().Location);
-
-                // RazorEngine will cleanup. 
-                AppDomain.Unload(razorEngineDomain);
-                return exitCode;
-            }
-
             var templateFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "EmailTemplates");
             var templateFilePath = Path.Combine(templateFolderPath, "WelcomeWithViewModel.cshtml");
 
@@ -125,31 +135,11 @@ namespace ConsoleApplication
             var smtpClient = new SmtpClient();
             smtpClient.Send(email);
 
-            Console.ReadLine();
-
             return 0;
         }
 
         private static int WelcomeWithLinkedViewModelTemplate()
         {
-            if (AppDomain.CurrentDomain.IsDefaultAppDomain())
-            {
-                // RazorEngine cannot clean up from the default appdomain...
-                Console.WriteLine("Switching to secound AppDomain, for RazorEngine...");
-                AppDomainSetup adSetup = new AppDomainSetup();
-                adSetup.ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
-                var current = AppDomain.CurrentDomain;
-                // You only need to add strongnames when your appdomain is not a full trust environment.
-                var strongNames = new StrongName[0];
-
-                var razorEngineDomain = AppDomain.CreateDomain("MyLinkedViewModelRazorEngineDomain", null, current.SetupInformation, new PermissionSet(PermissionState.Unrestricted), strongNames);
-                var exitCode = razorEngineDomain.ExecuteAssembly(Assembly.GetExecutingAssembly().Location);
-
-                // RazorEngine will cleanup. 
-                AppDomain.Unload(razorEngineDomain);
-                return exitCode;
-            }
-
             var templateFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "EmailTemplates");
             var templateFilePath = Path.Combine(templateFolderPath, "WelcomeWithLinkedViewModel.cshtml");
 
@@ -182,6 +172,17 @@ namespace ConsoleApplication
             // 'templateFilePath' should contain the absolute path of your template file.
             var emailHtmlBody = Engine.Razor.RunCompile(File.ReadAllText(templateFilePath), "linkedViewModelTemplateKey", typeof(LinkedUserListViewModel), model);
 
+            string contentID = Guid.NewGuid().ToString().Replace("-", "");
+            emailHtmlBody = emailHtmlBody.Replace("$CONTENTID$", "cid:" + contentID);
+
+            AlternateView htmlView = AlternateView.CreateAlternateViewFromString(emailHtmlBody, null, "text/html");
+
+            //path of image or stream
+            LinkedResource imagelink = new LinkedResource(@".\Images\Logo.png", "image/png");
+            imagelink.ContentId = contentID;
+            imagelink.TransferEncoding = System.Net.Mime.TransferEncoding.Base64;
+            htmlView.LinkedResources.Add(imagelink);
+
             // Send the email
             var email = new MailMessage()
             {
@@ -190,13 +191,12 @@ namespace ConsoleApplication
                 Subject = "Welcome with Linked ViewModel"
             };
 
+            email.AlternateViews.Add(htmlView);
             email.To.Add(new MailAddress(model.Receiver.Email, model.Receiver.Name));
-            // The From field will be populated from the app.config value by default
 
+            // The From field will be populated from the app.config value by default
             var smtpClient = new SmtpClient();
             smtpClient.Send(email);
-
-            Console.ReadLine();
 
             return 0;
         }
