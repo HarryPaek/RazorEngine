@@ -1,0 +1,38 @@
+﻿@using ConsoleApplication.Models
+@model ConsoleApplication.ViewModel.UserListViewModel
+
+<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Welcome</title>
+</head>
+<body>
+    <p>
+        Hi @Model.Receiver.Name,
+    </p>
+    <p>
+        Thanks for signing up to <a href="http://awesomesite.com">our awesome site</a>!
+    </p>
+
+    @if (!Model.Receiver.IsPremiumUser)
+    {
+        <p>
+            To make the most of it, <a href="http://awesomesite.com/upgrade">upgrade to our premium package now</a>!
+        </p>
+    }
+
+    <div>
+        <table>
+            <tr><th>Name</th><th>E-Mail</th><th>Primium User</th></tr>
+            @foreach (UserModel user in Model.RelatedUsers) {
+                <tr><td>@user.Name</td><td>@user.Email</td><td>@user.GetIsPremiumUserText()</td></tr>
+            }
+        </table>
+    </div>
+
+    <p>John, Founder</p>
+
+</body>
+</html>
