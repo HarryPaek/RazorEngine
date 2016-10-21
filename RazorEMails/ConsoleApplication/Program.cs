@@ -139,8 +139,16 @@ namespace ConsoleApplication
 
         private static int WelcomeWithLinkedViewModelTemplate()
         {
+            //path of image or stream
+            string logoFilePath = @"./Images/Logo.png";
+            string templateName = @"WelcomeWithLinkedViewModel.cshtml";
+
             var templateFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "EmailTemplates");
-            var templateFilePath = Path.Combine(templateFolderPath, "WelcomeWithLinkedViewModel.cshtml");
+            var templateFilePath = Path.Combine(templateFolderPath, templateName);
+
+            var test1 = Path.GetDirectoryName(logoFilePath);
+            var test2 = Path.GetDirectoryName(templateName);
+            var test3 = Path.GetDirectoryName(templateFilePath);
 
             // Create a model for our email
             var sarah = new LinkedUserModel() { Name = "Sarah", Email = "sarah@example.com", IsPremiumUser = false };
@@ -177,7 +185,6 @@ namespace ConsoleApplication
             AlternateView htmlView = AlternateView.CreateAlternateViewFromString(emailHtmlBody, null, "text/html");
 
             //path of image or stream
-            string logoFilePath = @".\Images\Logo.png";
             LinkedResource imagelink = null;
 
             try
